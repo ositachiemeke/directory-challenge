@@ -1,5 +1,3 @@
-# Directory Manager
- 
 ## Overview
  
 The `DirectoryManager` is a PHP class that provides functionality to manage hierarchical directories through command line operations. It allows users to create, move, delete directories, and list the directory structure.
@@ -11,9 +9,8 @@ The `DirectoryManager` is a PHP class that provides functionality to manage hier
 ### Installation
  
 1. Clone the repository:
- 
-   ```bash
-   git clone https://github.com/yourusername/directory-manager.git
+
+   git clone https://github.com/ositachiemeke/directory-challenge.git
  
 2. Change directory into the folder where the project has been cloned and ensure that you are in the  directory-manager directory
  
