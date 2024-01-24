@@ -126,28 +126,32 @@ class DirectoryManager
      */
     private function createDirectory($path)
     {
-        if (!$this->isValidPath($path)) {
-            echo "Invalid path format. Please enter a valid path.\n";
-            return;
+        try {
+                if (!$this->isValidPath($path)) {
+                    echo "Invalid path format. Please enter a valid path.\n";
+                    return;
+                }
+
+                if ($this->directoryExists($path)) {
+                    echo "Directory already exists: $path\n";
+                    return;
+                }
+
+                $parts = explode('/', $path);
+                $currentDir = &$this->directories;
+
+                foreach ($parts as $part) {
+                    if (!isset($currentDir[$part])) {
+                        $currentDir[$part] = [];
+                    }
+
+                    $currentDir = &$currentDir[$part];
+                }
+
+                echo "Created directory: $path\n";
+        } catch (\Throwable $th) {
+            throw $th;
         }
-
-        if ($this->directoryExists($path)) {
-            echo "Directory already exists: $path\n";
-            return;
-        }
-
-        $parts = explode('/', $path);
-        $currentDir = &$this->directories;
-
-        foreach ($parts as $part) {
-            if (!isset($currentDir[$part])) {
-                $currentDir[$part] = [];
-            }
-
-            $currentDir = &$currentDir[$part];
-        }
-
-        echo "Created directory: $path\n";
     }
 
     /**
@@ -192,33 +196,115 @@ class DirectoryManager
      */
     private function moveDirectory($sourcePath, $destinationPath)
     {
-        if (!$this->isValidPath($sourcePath) || !$this->isValidPath($destinationPath)) {
-            echo "Invalid path format. Please enter valid paths.\n";
-            return;
+        try {
+                if (!$this->isValidPath($sourcePath) || !$this->isValidPath($destinationPath)) {
+                    echo "Invalid path format. Please enter valid paths.\n";
+                    return;
+                }
+
+                $sourceDir = $this->getDirectoryByPath($sourcePath);
+
+                if ($sourceDir === null) {
+                    echo "Cannot move $sourcePath - $sourcePath does not exist\n";
+                    return;
+                }
+
+                $destinationDir = &$this->getOrCreateDirectoryByPath($destinationPath);
+
+                $itemName = basename($sourcePath);
+
+                if (!is_array($destinationDir)) {
+                    $destinationDir = [];
+                }
+
+                $destinationDir[$itemName] = array_merge($sourceDir);
+
+                $this->removeDirectory($this->directories, $sourcePath);
+
+                $this->updateDirectories($destinationDir, $destinationPath);
+
+                echo "Moved $itemName from $sourcePath to $destinationPath\n";
+        } catch (\Throwable $th) {
+            throw $th;
         }
+    }
 
-        $sourceDir = $this->getDirectoryByPath($sourcePath);
+    /**
+     * Updates the root directory after moving a directory to a new location.
+     *
+     * @param array $directory The new directory structure to merge.
+     * @param string $path      The path of the directory.
+     */
+    private function updateDirectories(&$directory, $path)
+    {
+        try {
+                $pathParts = explode('/', $path);
+                $currentDir = &$this->directories;
 
-        if ($sourceDir === null) {
-            echo "Cannot move $sourcePath - $sourcePath does not exist\n";
-            return;
+                foreach ($pathParts as $part) {
+                    if (!isset($currentDir[$part])) {
+                        $currentDir[$part] = [];
+                    }
+                    $currentDir = &$currentDir[$part];
+                }
+
+                $currentDir = array_merge($currentDir, $directory);
+        } catch (\Throwable $th) {
+            throw $th;
         }
+    }
 
-        $destinationDir = &$this->getOrCreateDirectoryByPath($destinationPath);
+    /**
+     * Deletes a directory specified by the given path.
+     *
+     * @param string $path The path of the directory to delete.
+     */
+    private function deleteDirectory($path)
+    {
+        try {
+            
+                if (!$this->isValidPath($path)) {
+                    echo "Invalid path format. Please enter a valid path.\n";
+                    return;
+                }
 
-        $itemName = basename($sourcePath);
+                $directoryToDelete = &$this->getDirectoryByPath($path);
 
-        if (!is_array($destinationDir)) {
-            $destinationDir = [];
+                if ($directoryToDelete === null) {
+                    echo "Cannot delete $path - $path does not exist\n";
+                    return;
+                }
+
+                $this->removeDirectory($this->directories, $path);
+
+                echo "Deleted directory: $path\n";
+        } catch (\Throwable $th) {
+                throw $th;
         }
+    }
 
-        $destinationDir[$itemName] = array_merge($sourceDir);
+    /**
+     * Lists directories in a hierarchical structure.
+     *
+     * @param array|null $directories The directory structure to list.
+     * @param string     $indent      The indentation string.
+     */
+    private function listDirectories($directories = null, $indent = '')
+    {
+        try {
+                if ($directories === null) {
+                    $directories = $this->directories;
+                }
 
-        $this->removeDirectory($this->directories, $sourcePath);
-
-        $this->updateDirectories($destinationDir, $destinationPath);
-
-        echo "Moved $itemName from $sourcePath to $destinationPath\n";
+                foreach ($directories as $directory => $subdirectories) {
+                    echo $indent . $directory . "\n";
+                    if (!empty($subdirectories)) {
+                        $this->listDirectories($subdirectories, $indent . '  ');
+                    }
+                }
+        } catch (\Throwable $th) {
+            throw $th;
+        }
     }
 
     /**
@@ -241,71 +327,6 @@ class DirectoryManager
         }
 
         unset($currentDir[$lastPart]);
-    }
-
-    /**
-     * Updates the root directory after moving a directory to a new location.
-     *
-     * @param array $directory The new directory structure to merge.
-     * @param string $path      The path of the directory.
-     */
-    private function updateDirectories(&$directory, $path)
-    {
-        $pathParts = explode('/', $path);
-        $currentDir = &$this->directories;
-
-        foreach ($pathParts as $part) {
-            if (!isset($currentDir[$part])) {
-                $currentDir[$part] = [];
-            }
-            $currentDir = &$currentDir[$part];
-        }
-
-        $currentDir = array_merge($currentDir, $directory);
-    }
-
-    /**
-     * Deletes a directory specified by the given path.
-     *
-     * @param string $path The path of the directory to delete.
-     */
-    private function deleteDirectory($path)
-    {
-        if (!$this->isValidPath($path)) {
-            echo "Invalid path format. Please enter a valid path.\n";
-            return;
-        }
-
-        $directoryToDelete = &$this->getDirectoryByPath($path);
-
-        if ($directoryToDelete === null) {
-            echo "Cannot delete $path - $path does not exist\n";
-            return;
-        }
-
-        $this->removeDirectory($this->directories, $path);
-
-        echo "Deleted directory: $path\n";
-    }
-
-    /**
-     * Lists directories in a hierarchical structure.
-     *
-     * @param array|null $directories The directory structure to list.
-     * @param string     $indent      The indentation string.
-     */
-    private function listDirectories($directories = null, $indent = '')
-    {
-        if ($directories === null) {
-            $directories = $this->directories;
-        }
-
-        foreach ($directories as $directory => $subdirectories) {
-            echo $indent . $directory . "\n";
-            if (!empty($subdirectories)) {
-                $this->listDirectories($subdirectories, $indent . '  ');
-            }
-        }
     }
 }
 
