@@ -4,3 +4,5 @@ class DirectoryManager
 {
     private $directories = [];
 }
+
+?>
